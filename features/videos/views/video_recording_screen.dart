@@ -339,7 +339,7 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen>
                       children: [
                         const Spacer(),
                         GestureDetector(
-                          // onTapDown: _startRecording,
+                          onTapDown: _startRecording,
                           onVerticalDragUpdate:
                               (DragUpdateDetails details) async {
                             // _startRecording;
@@ -357,7 +357,7 @@ class _VideoRecordingScreenState extends State<VideoRecordingScreen>
 
                             // _cameraController.setZoomLevel(zoom);
                           },
-                          // onLongPressEnd: (details) => _stopRecording(),
+                          onLongPressEnd: (details) => _stopRecording(),
                           child: ScaleTransition(
                             scale: _buttonAnimation,
                             child: Stack(
