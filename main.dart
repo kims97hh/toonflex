@@ -1,17 +1,23 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tiktok_clone/common/widgets/video_configration/videdo_config.dart';
 import 'package:tiktok_clone/constants/sizes.dart';
 import 'package:tiktok_clone/features/videos/repos/playback_config_repo.dart';
 import 'package:tiktok_clone/features/videos/view_models/playback_config_vm.dart';
+import 'package:tiktok_clone/firebase_options.dart';
 import 'package:tiktok_clone/generated/l10n.dart';
 import 'package:tiktok_clone/router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  ); // 파이어베이스 초기화
 
   await SystemChrome.setPreferredOrientations(
     [
@@ -26,27 +32,29 @@ void main() async {
     SystemUiOverlayStyle.light,
   );
 
-  runApp(MultiProvider(
-    providers: [
-      ChangeNotifierProvider(
-        create: (context) => PlaybackConfigViewModel(repository),
-      ),
-    ],
-    child: const TikTokApp(),
-  ));
+  runApp(
+    ProviderScope(
+      overrides: [
+        playbackConfigProvider.overrideWith(
+          () => PlaybackConfigViewModel(repository),
+        ), // 원래는 PlaybackConfigViewModel(_repository) 여야함, NotifierProvider<> 에서 발생될 에러 이전에 값을 넣어 에러방지를 위해 overrides: 로 임시로 작성함
+      ],
+      child: const TikTokApp(),
+    ),
+  );
 }
 
-class TikTokApp extends StatelessWidget {
+class TikTokApp extends ConsumerWidget {
   const TikTokApp({super.key});
 
   // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     S.load(const Locale("en")); //App 기본 국가설정강제
     return ValueListenableBuilder(
       valueListenable: darkMode,
       builder: (context, value, child) => MaterialApp.router(
-        routerConfig: router, // router 사용, 따라서 home: 이 필요없다.
+        routerConfig: ref.watch(routerProvider), // router 사용, 따라서 home: 이 필요없다.
         debugShowCheckedModeBanner: false, //디버그모드 표시여부
         title: 'TikTok Clone',
         localizationsDelegates: const [

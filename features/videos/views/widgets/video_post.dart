@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:provider/provider.dart';
 import 'package:tiktok_clone/constants/breakpoints.dart';
 import 'package:tiktok_clone/constants/gaps.dart';
 import 'package:tiktok_clone/constants/sizes.dart';
@@ -12,7 +12,7 @@ import 'package:tiktok_clone/generated/l10n.dart';
 import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-class VideoPost extends StatefulWidget {
+class VideoPost extends ConsumerStatefulWidget {
   final Function onVideoFinished;
   final int index;
 
@@ -23,10 +23,11 @@ class VideoPost extends StatefulWidget {
   });
 
   @override
-  State<VideoPost> createState() => _VideoPostState();
+  VideoPostState createState() => VideoPostState();
 }
 
-class _VideoPostState extends State<VideoPost> with TickerProviderStateMixin {
+class VideoPostState extends ConsumerState<VideoPost>
+    with TickerProviderStateMixin {
   //"vsync:" 를 하나만 사용하기위한 with Single~~Mixin ,두개이상은 TickerProviderStateMixin (with는 메소드 전체를 불러옴) , 더불어 리소스 절약을 위해 위젯이 화면에 보일때만 tick, ticker를 제공해줌. (ticker는 매 에니메이션 프레임마다 callback, 결과적으로 부드러운 에니메이션 표현)
   late final VideoPlayerController _videoPlayerController;
   final Duration _animationDuration = const Duration(milliseconds: 200);
@@ -48,16 +49,18 @@ class _VideoPostState extends State<VideoPost> with TickerProviderStateMixin {
         VideoPlayerController.asset("assets/videos/video.mp4");
     await _videoPlayerController.initialize();
     await _videoPlayerController.setLooping(true);
-    final muted = context.read<PlaybackConfigViewModel>().muted;
+    final muted = ref.read(playbackConfigProvider).muted;
     if (kIsWeb || muted) {
       await _videoPlayerController.setVolume(0);
     } else {
       await _videoPlayerController.setVolume(1);
     }
     _videoPlayerController.addListener(_onVideoChange);
-    setState(() {
-      _isCurrentMuted = context.read<PlaybackConfigViewModel>().muted;
-    });
+    if (_isCurrentMuted != muted) {
+      setState(() {
+        _isCurrentMuted = ref.read(playbackConfigProvider).muted;
+      });
+    }
   }
 
   @override
@@ -73,36 +76,31 @@ class _VideoPostState extends State<VideoPost> with TickerProviderStateMixin {
       duration: _animationDuration,
     );
 
-    context
-        .read<PlaybackConfigViewModel>()
-        .addListener(_onPlaybackConfigChanged);
-
-    _isCurrentMuted = context.read<PlaybackConfigViewModel>().muted;
+    _isCurrentMuted = ref.read(playbackConfigProvider).muted;
   }
 
   @override
   void dispose() {
     _videoPlayerController.dispose();
+
     super.dispose();
   }
 
-  void _onPlaybackConfigChanged() {
+  /* void _onPlaybackConfigChanged() {  // provider 사용할때 코드 (riverpod에선 불필요)
     if (!mounted) return;
-    final muted = context.read<PlaybackConfigViewModel>().muted;
-    if (muted) {
+    if (ref.read(playbackConfigProvider).muted) {
       _videoPlayerController.setVolume(0);
     } else {
       _videoPlayerController.setVolume(1);
     }
-  }
+  } */
 
   void _onVisibilityChanged(VisibilityInfo info) {
     if (!mounted) return;
     if (info.visibleFraction == 1 &&
         !_isPaused &&
         !_videoPlayerController.value.isPlaying) {
-      final autoplay = context.read<PlaybackConfigViewModel>().autoplay;
-      if (autoplay) {
+      if (ref.read(playbackConfigProvider).autoplay) {
         _videoPlayerController.play();
       }
     }
@@ -149,7 +147,7 @@ class _VideoPostState extends State<VideoPost> with TickerProviderStateMixin {
     setState(() {
       _isCurrentMuted = !_isCurrentMuted;
     });
-    final muted = context.read<PlaybackConfigViewModel>().muted;
+    final muted = ref.read(playbackConfigProvider).muted;
     if (muted && _isCurrentMuted) {
       _videoPlayerController.setVolume(0);
     } else if (_isCurrentMuted) {
